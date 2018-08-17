@@ -192,7 +192,7 @@ void MoveToRightSideOfScreen(HDC hdc)
 	SetBkColor(hdc, black);
 	SetTextColor(hdc, white);
 
-	int beginPos = GetSystemMetrics(SM_CXSCREEN) * 97 / 100;
+	int beginPos = GetSystemMetrics(SM_CXSCREEN) * 95 / 100;
 	MoveToEx(hdc, beginPos, 0, NULL);
 }
 
@@ -219,9 +219,20 @@ void PaintWorkspace(HDC hdc)
 void PaintLocalTime(HDC hdc)
 {
 	GetLocalTime(&localTime);
+	WORD resultHour;
 
-	TCHAR txtTime[6];
-	int txtTimeLength = wsprintf(txtTime, _T("%02d:%02d"), localTime.wHour, localTime.wMinute);
+	if (localTime.wHour == 0)
+		resultHour = 12;
+	else if (localTime.wHour < 13)
+		resultHour = localTime.wHour;
+	else
+		resultHour = (localTime.wHour - 12);
+
+	LPCWSTR labelTimePeriod = (localTime.wHour < 12) ? _T("AM") : _T("PM");
+
+	TCHAR txtTime[9];
+	int txtTimeLength = wsprintf(txtTime, _T("%02d:%02d %s"), resultHour, localTime.wMinute, labelTimePeriod);
 
 	TextOut(hdc, 0, 0, txtTime, txtTimeLength);
 }
+
