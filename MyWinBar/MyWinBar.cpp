@@ -8,6 +8,14 @@ UINT currentWorkspace;
 SYSTEMTIME localTime;
 APPBARDATA appbarData;
 
+RECT rectLeft;
+RECT rectCenter;
+RECT rectRight;
+
+HWND currentFocusWindow;
+int focusWindowTextBufferLength = 100;
+TCHAR focusWindowTextBuffer[100];
+
 HINSTANCE hInst;
 WCHAR szTitle[MAX_LOADSTRING];
 WCHAR szWindowClass[MAX_LOADSTRING];
@@ -119,7 +127,27 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	   TRUE
    );
 
+   //Split bar equally
+   int barPortion = GetSystemMetrics(SM_CXSCREEN) / 3;
+
+   rectLeft.left = 0;
+   rectLeft.top = 0;
+   rectLeft.right = barPortion;
+   rectLeft.bottom = MAX_APPBAR_HEIGHT;
+
+   rectCenter.left = barPortion;
+   rectCenter.top = 0;
+   rectCenter.right = barPortion * 2;
+   rectCenter.bottom = MAX_APPBAR_HEIGHT;
+
+   rectRight.left = barPortion * 2;
+   rectRight.top = 0;
+   rectRight.right = barPortion * 3;
+   rectRight.bottom = MAX_APPBAR_HEIGHT;
+
    SetTimer(hWnd, IDT_REDRAW_TIMER, TIMER_REDRAW_RATE, NULL);
+   SetTimer(hWnd, IDT_REDRAW_BAR_CENTER_TIMER, TIMER_REDRAW_BAR_CENTER_RATE, NULL);
+
 	return TRUE;
 }
 
@@ -134,7 +162,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 		case IDT_REDRAW_TIMER:
 		{
-			InvalidateRect(hWnd, 0, TRUE);
+			InvalidateRect(hWnd, &rectRight, TRUE);
+			break;
+		}
+
+		case IDT_REDRAW_BAR_CENTER_TIMER:
+		{
+			InvalidateRect(hWnd, &rectCenter, TRUE);
 			break;
 		}
 
@@ -151,6 +185,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		HDC hdc = BeginPaint(hWnd, &ps);
 
 		PaintWorkspace(hdc);
+		PaintCurrentFocusWindow(hdc);
+
 		MoveToRightSideOfScreen(hdc);
 		PaintLocalTime(hdc);
 
@@ -163,8 +199,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		PCOPYDATASTRUCT p = (PCOPYDATASTRUCT) lParam;
 
 		if (p->dwData == 1) {
-			currentWorkspace = *((UINT*)p->lpData);
-			InvalidateRect(hWnd, 0, TRUE);
+			currentWorkspace = *(UINT*)p->lpData;
+			InvalidateRect(hWnd, &rectLeft, TRUE);
+		}
+		else if (p->dwData == 2) {
+			currentFocusWindow = *(HWND*)p->lpData;
+			InvalidateRect(hWnd, &rectCenter, TRUE);
 		}
 
 		break;
@@ -173,8 +213,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_DESTROY:
 	{
 		KillTimer(hWnd, IDT_REDRAW_TIMER);
+		KillTimer(hWnd, IDT_REDRAW_BAR_CENTER_TIMER);
+
 		SHAppBarMessage(ABM_REMOVE, &appbarData);
         PostQuitMessage(0);
+
         break;
 	}
 
@@ -236,3 +279,19 @@ void PaintLocalTime(HDC hdc)
 	TextOut(hdc, 0, 0, txtTime, txtTimeLength);
 }
 
+void PaintCurrentFocusWindow(HDC hdc)
+{
+	SetBkColor(hdc, black);
+	SetTextColor(hdc, goldYellow);
+
+	HWND hWnd = currentFocusWindow;
+
+	if (hWnd == NULL) {
+		DrawTextW(hdc, NULL, 0, &rectCenter, DT_CENTER | DT_VCENTER);
+	}
+	else {
+		int length = GetWindowText(hWnd, focusWindowTextBuffer, focusWindowTextBufferLength);
+		if (length > 0)
+			DrawTextW(hdc, focusWindowTextBuffer, length, &rectCenter, DT_CENTER | DT_VCENTER);
+	}
+}
