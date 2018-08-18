@@ -4,7 +4,9 @@
 
 #define MAX_LOADSTRING 100
 
+HWND currentFocusWindow;
 UINT currentWorkspace;
+
 SYSTEMTIME localTime;
 APPBARDATA appbarData;
 
@@ -12,9 +14,8 @@ RECT rectLeft;
 RECT rectCenter;
 RECT rectRight;
 
-HWND currentFocusWindow;
-int focusWindowTextBufferLength = 100;
-TCHAR focusWindowTextBuffer[100];
+int focusWindowTextBufferLength = MAX_LOADSTRING;
+TCHAR focusWindowTextBuffer[MAX_LOADSTRING];
 
 HINSTANCE hInst;
 WCHAR szTitle[MAX_LOADSTRING];
@@ -129,20 +130,22 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    //Split bar equally
    int barPortion = GetSystemMetrics(SM_CXSCREEN) / 3;
+   int shrinkPercent = 30;
+   int shrinkPortion = (int) ((barPortion * shrinkPercent) / 100);
 
    rectLeft.left = 0;
    rectLeft.top = 0;
-   rectLeft.right = barPortion;
+   rectLeft.right = (barPortion - shrinkPortion);
    rectLeft.bottom = MAX_APPBAR_HEIGHT;
 
-   rectCenter.left = barPortion;
+   rectCenter.left = rectLeft.right;
    rectCenter.top = 0;
-   rectCenter.right = barPortion * 2;
+   rectCenter.right = (barPortion * 2) + shrinkPortion;
    rectCenter.bottom = MAX_APPBAR_HEIGHT;
 
-   rectRight.left = barPortion * 2;
+   rectRight.left = rectCenter.right;
    rectRight.top = 0;
-   rectRight.right = barPortion * 3;
+   rectRight.right = (barPortion * 3);
    rectRight.bottom = MAX_APPBAR_HEIGHT;
 
    SetTimer(hWnd, IDT_REDRAW_TIMER, TIMER_REDRAW_RATE, NULL);
