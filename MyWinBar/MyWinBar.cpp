@@ -148,6 +148,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    rectRight.right = (barPortion * 3);
    rectRight.bottom = MAX_APPBAR_HEIGHT;
 
+   GetLocalTime(&localTime);
+
    SetTimer(hWnd, IDT_REDRAW_TIMER, TIMER_REDRAW_RATE, NULL);
    SetTimer(hWnd, IDT_REDRAW_BAR_CENTER_TIMER, TIMER_REDRAW_BAR_CENTER_RATE, NULL);
 
@@ -165,6 +167,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 		case IDT_REDRAW_TIMER:
 		{
+			GetLocalTime(&localTime);
 			InvalidateRect(hWnd, &rectRight, TRUE);
 			break;
 		}
@@ -264,13 +267,14 @@ void PaintWorkspace(HDC hdc)
 
 void PaintLocalTime(HDC hdc)
 {
-	GetLocalTime(&localTime);
 	WORD resultHour;
 
 	if (localTime.wHour == 0)
 		resultHour = 12;
+
 	else if (localTime.wHour < 13)
 		resultHour = localTime.wHour;
+
 	else
 		resultHour = (localTime.wHour - 12);
 
