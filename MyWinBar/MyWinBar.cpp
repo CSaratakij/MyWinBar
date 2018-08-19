@@ -4,9 +4,18 @@
 
 #define MAX_LOADSTRING 100
 
+HWND currentFocusWindow;
 UINT currentWorkspace;
+
 SYSTEMTIME localTime;
 APPBARDATA appbarData;
+
+RECT rectLeft;
+RECT rectCenter;
+RECT rectRight;
+
+int focusWindowTextBufferLength = MAX_LOADSTRING;
+TCHAR focusWindowTextBuffer[MAX_LOADSTRING];
 
 HINSTANCE hInst;
 WCHAR szTitle[MAX_LOADSTRING];
@@ -119,7 +128,31 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	   TRUE
    );
 
+   //Split bar equally
+   int barPortion = GetSystemMetrics(SM_CXSCREEN) / 3;
+   int shrinkPercent = 30;
+   int shrinkPortion = (int) ((barPortion * shrinkPercent) / 100);
+
+   rectLeft.left = 0;
+   rectLeft.top = 0;
+   rectLeft.right = (barPortion - shrinkPortion);
+   rectLeft.bottom = MAX_APPBAR_HEIGHT;
+
+   rectCenter.left = rectLeft.right;
+   rectCenter.top = 0;
+   rectCenter.right = (barPortion * 2) + shrinkPortion;
+   rectCenter.bottom = MAX_APPBAR_HEIGHT;
+
+   rectRight.left = rectCenter.right;
+   rectRight.top = 0;
+   rectRight.right = (barPortion * 3);
+   rectRight.bottom = MAX_APPBAR_HEIGHT;
+
+   GetLocalTime(&localTime);
+
    SetTimer(hWnd, IDT_REDRAW_TIMER, TIMER_REDRAW_RATE, NULL);
+   SetTimer(hWnd, IDT_REDRAW_BAR_CENTER_TIMER, TIMER_REDRAW_BAR_CENTER_RATE, NULL);
+
 	return TRUE;
 }
 
@@ -134,7 +167,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 		case IDT_REDRAW_TIMER:
 		{
-			InvalidateRect(hWnd, 0, TRUE);
+			GetLocalTime(&localTime);
+			InvalidateRect(hWnd, &rectRight, TRUE);
+			break;
+		}
+
+		case IDT_REDRAW_BAR_CENTER_TIMER:
+		{
+			InvalidateRect(hWnd, &rectCenter, TRUE);
 			break;
 		}
 
@@ -151,6 +191,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		HDC hdc = BeginPaint(hWnd, &ps);
 
 		PaintWorkspace(hdc);
+		PaintCurrentFocusWindow(hdc);
+
 		MoveToRightSideOfScreen(hdc);
 		PaintLocalTime(hdc);
 
@@ -163,8 +205,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		PCOPYDATASTRUCT p = (PCOPYDATASTRUCT) lParam;
 
 		if (p->dwData == 1) {
-			currentWorkspace = *((UINT*)p->lpData);
-			InvalidateRect(hWnd, 0, TRUE);
+			currentWorkspace = *(UINT*)p->lpData;
+			InvalidateRect(hWnd, &rectLeft, TRUE);
+		}
+		else if (p->dwData == 2) {
+			currentFocusWindow = *(HWND*)p->lpData;
+			InvalidateRect(hWnd, &rectCenter, TRUE);
 		}
 
 		break;
@@ -173,8 +219,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_DESTROY:
 	{
 		KillTimer(hWnd, IDT_REDRAW_TIMER);
+		KillTimer(hWnd, IDT_REDRAW_BAR_CENTER_TIMER);
+
 		SHAppBarMessage(ABM_REMOVE, &appbarData);
         PostQuitMessage(0);
+
         break;
 	}
 
@@ -192,7 +241,7 @@ void MoveToRightSideOfScreen(HDC hdc)
 	SetBkColor(hdc, black);
 	SetTextColor(hdc, white);
 
-	int beginPos = GetSystemMetrics(SM_CXSCREEN) * 97 / 100;
+	int beginPos = GetSystemMetrics(SM_CXSCREEN) * 95 / 100;
 	MoveToEx(hdc, beginPos, 0, NULL);
 }
 
@@ -218,10 +267,38 @@ void PaintWorkspace(HDC hdc)
 
 void PaintLocalTime(HDC hdc)
 {
-	GetLocalTime(&localTime);
+	WORD resultHour;
 
-	TCHAR txtTime[6];
-	int txtTimeLength = wsprintf(txtTime, _T("%02d:%02d"), localTime.wHour, localTime.wMinute);
+	if (localTime.wHour == 0)
+		resultHour = 12;
+
+	else if (localTime.wHour < 13)
+		resultHour = localTime.wHour;
+
+	else
+		resultHour = (localTime.wHour - 12);
+
+	LPCWSTR labelTimePeriod = (localTime.wHour < 12) ? _T("AM") : _T("PM");
+
+	TCHAR txtTime[9];
+	int txtTimeLength = wsprintf(txtTime, _T("%02d:%02d %s"), resultHour, localTime.wMinute, labelTimePeriod);
 
 	TextOut(hdc, 0, 0, txtTime, txtTimeLength);
+}
+
+void PaintCurrentFocusWindow(HDC hdc)
+{
+	SetBkColor(hdc, black);
+	SetTextColor(hdc, goldYellow);
+
+	HWND hWnd = currentFocusWindow;
+
+	if (hWnd == NULL) {
+		DrawTextW(hdc, NULL, 0, &rectCenter, DT_CENTER | DT_VCENTER);
+	}
+	else {
+		int length = GetWindowText(hWnd, focusWindowTextBuffer, focusWindowTextBufferLength);
+		if (length > 0)
+			DrawTextW(hdc, focusWindowTextBuffer, length, &rectCenter, DT_CENTER | DT_VCENTER);
+	}
 }
