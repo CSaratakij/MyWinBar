@@ -15,7 +15,12 @@
 #define white RGB(255, 255, 255)
 #define goldYellow RGB(255, 185, 0)
 
+#define colorBatteryHigh RGB(164, 244, 66)
+#define colorBatteryLow RGB(244, 223, 65)
+#define colorBatteryCritical RGB(255, 28, 28)
+
 void MoveToRightSideOfScreen(HDC);
 void PaintWorkspace(HDC);
-void PaintCurrentFocusWindow(HDC hdc);
+void PaintCurrentFocusWindow(HDC);
+void PaintBatteryInfo(HDC);
 void PaintLocalTime(HDC);

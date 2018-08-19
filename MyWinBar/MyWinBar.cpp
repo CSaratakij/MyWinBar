@@ -7,7 +7,6 @@
 HWND currentFocusWindow;
 UINT currentWorkspace;
 
-SYSTEMTIME localTime;
 APPBARDATA appbarData;
 
 RECT rectLeft;
@@ -16,6 +15,16 @@ RECT rectRight;
 
 int focusWindowTextBufferLength = MAX_LOADSTRING;
 TCHAR focusWindowTextBuffer[MAX_LOADSTRING];
+
+RECT rectBatteryBG;
+RECT rectBatteryStatusBG;
+
+HBRUSH brushBatteryHigh;
+HBRUSH brushBatteryLow;
+HBRUSH brushBatteryCritical;
+
+SYSTEMTIME localTime;
+SYSTEM_POWER_STATUS powerStatus;
 
 HINSTANCE hInst;
 WCHAR szTitle[MAX_LOADSTRING];
@@ -148,7 +157,12 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    rectRight.right = (barPortion * 3);
    rectRight.bottom = MAX_APPBAR_HEIGHT;
 
+   brushBatteryHigh = CreateSolidBrush(colorBatteryHigh);
+   brushBatteryLow = CreateSolidBrush(colorBatteryLow);
+   brushBatteryCritical = CreateSolidBrush(colorBatteryCritical);
+
    GetLocalTime(&localTime);
+   GetSystemPowerStatus(&powerStatus);
 
    SetTimer(hWnd, IDT_REDRAW_TIMER, TIMER_REDRAW_RATE, NULL);
    SetTimer(hWnd, IDT_REDRAW_BAR_CENTER_TIMER, TIMER_REDRAW_BAR_CENTER_RATE, NULL);
@@ -168,6 +182,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case IDT_REDRAW_TIMER:
 		{
 			GetLocalTime(&localTime);
+			GetSystemPowerStatus(&powerStatus);
 			InvalidateRect(hWnd, &rectRight, TRUE);
 			break;
 		}
@@ -192,6 +207,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 		PaintWorkspace(hdc);
 		PaintCurrentFocusWindow(hdc);
+
+		PaintBatteryInfo(hdc);
 
 		MoveToRightSideOfScreen(hdc);
 		PaintLocalTime(hdc);
@@ -221,6 +238,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		KillTimer(hWnd, IDT_REDRAW_TIMER);
 		KillTimer(hWnd, IDT_REDRAW_BAR_CENTER_TIMER);
 
+		DeleteObject(brushBatteryHigh);
+		DeleteObject(brushBatteryLow);
+		DeleteObject(brushBatteryCritical);
+
 		SHAppBarMessage(ABM_REMOVE, &appbarData);
         PostQuitMessage(0);
 
@@ -232,17 +253,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
 
     return 0;
-}
-
-void MoveToRightSideOfScreen(HDC hdc)
-{
-	SetTextAlign(hdc, TA_LEFT | TA_TOP | TA_UPDATECP);
-
-	SetBkColor(hdc, black);
-	SetTextColor(hdc, white);
-
-	int beginPos = GetSystemMetrics(SM_CXSCREEN) * 95 / 100;
-	MoveToEx(hdc, beginPos, 0, NULL);
 }
 
 void PaintWorkspace(HDC hdc)
@@ -265,6 +275,84 @@ void PaintWorkspace(HDC hdc)
 	}
 }
 
+void PaintCurrentFocusWindow(HDC hdc)
+{
+	SetBkColor(hdc, black);
+	SetTextColor(hdc, goldYellow);
+
+	HWND hWnd = currentFocusWindow;
+
+	if (hWnd == NULL) {
+		DrawTextW(hdc, NULL, 0, &rectCenter, DT_CENTER | DT_VCENTER);
+	}
+	else {
+		int length = GetWindowText(hWnd, focusWindowTextBuffer, focusWindowTextBufferLength);
+		if (length > 0)
+			DrawTextW(hdc, focusWindowTextBuffer, length, &rectCenter, DT_CENTER | DT_VCENTER);
+	}
+}
+
+void PaintBatteryInfo(HDC hdc)
+{
+	if (powerStatus.BatteryFlag == 128 || powerStatus.BatteryFlag == 255)
+		return;
+
+	rectBatteryBG;
+	rectBatteryStatusBG;
+
+	int offset = 3;
+
+	rectBatteryBG.left = GetSystemMetrics(SM_CXSCREEN) * 92 / 100;
+	rectBatteryBG.top = 2;
+	rectBatteryBG.right = GetSystemMetrics(SM_CXSCREEN) * 94 / 100;
+	rectBatteryBG.bottom = (MAX_APPBAR_HEIGHT - 6);
+
+	rectBatteryStatusBG.left = rectBatteryBG.left + offset;
+	rectBatteryStatusBG.top = rectBatteryBG.top + offset;
+	rectBatteryStatusBG.right = rectBatteryBG.right - offset;
+	rectBatteryStatusBG.bottom = rectBatteryBG.bottom - offset;
+
+	int rectBatteryStatusBGSize = (rectBatteryStatusBG.right - rectBatteryStatusBG.left);
+
+	Rectangle(hdc, rectBatteryBG.left, rectBatteryBG.top, rectBatteryBG.right, rectBatteryBG.bottom);
+
+	switch (powerStatus.BatteryFlag) {
+	case 1:
+	{
+		FillRect(hdc, &rectBatteryStatusBG, brushBatteryHigh);
+		break;
+	}
+
+	case 2:
+	{
+		rectBatteryStatusBG.left = rectBatteryStatusBG.right - (rectBatteryStatusBGSize / 2);
+		FillRect(hdc, &rectBatteryStatusBG, brushBatteryLow);
+		break;
+	}
+
+	case 3:
+	{
+		rectBatteryStatusBG.left = rectBatteryStatusBG.right - (rectBatteryStatusBGSize / 3);
+		FillRect(hdc, &rectBatteryStatusBG, brushBatteryCritical);
+		break;
+	}
+
+	default:
+		break;
+	}
+}
+
+void MoveToRightSideOfScreen(HDC hdc)
+{
+	SetTextAlign(hdc, TA_LEFT | TA_TOP | TA_UPDATECP);
+
+	SetBkColor(hdc, black);
+	SetTextColor(hdc, white);
+
+	int beginPos = GetSystemMetrics(SM_CXSCREEN) * 95 / 100;
+	MoveToEx(hdc, beginPos, 0, NULL);
+}
+
 void PaintLocalTime(HDC hdc)
 {
 	WORD resultHour;
@@ -284,21 +372,4 @@ void PaintLocalTime(HDC hdc)
 	int txtTimeLength = wsprintf(txtTime, _T("%02d:%02d %s"), resultHour, localTime.wMinute, labelTimePeriod);
 
 	TextOut(hdc, 0, 0, txtTime, txtTimeLength);
-}
-
-void PaintCurrentFocusWindow(HDC hdc)
-{
-	SetBkColor(hdc, black);
-	SetTextColor(hdc, goldYellow);
-
-	HWND hWnd = currentFocusWindow;
-
-	if (hWnd == NULL) {
-		DrawTextW(hdc, NULL, 0, &rectCenter, DT_CENTER | DT_VCENTER);
-	}
-	else {
-		int length = GetWindowText(hWnd, focusWindowTextBuffer, focusWindowTextBufferLength);
-		if (length > 0)
-			DrawTextW(hdc, focusWindowTextBuffer, length, &rectCenter, DT_CENTER | DT_VCENTER);
-	}
 }
