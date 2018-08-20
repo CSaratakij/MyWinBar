@@ -300,7 +300,7 @@ void PaintBatteryInfo(HDC hdc)
 	rectBatteryBG;
 	rectBatteryStatusBG;
 
-	int offset = 3;
+	int offset = 2;
 
 	rectBatteryBG.left = GetSystemMetrics(SM_CXSCREEN) * 92 / 100;
 	rectBatteryBG.top = 2;
@@ -313,32 +313,25 @@ void PaintBatteryInfo(HDC hdc)
 	rectBatteryStatusBG.bottom = rectBatteryBG.bottom - offset;
 
 	int rectBatteryStatusBGSize = (rectBatteryStatusBG.right - rectBatteryStatusBG.left);
-
 	Rectangle(hdc, rectBatteryBG.left, rectBatteryBG.top, rectBatteryBG.right, rectBatteryBG.bottom);
 
-	switch (powerStatus.BatteryFlag) {
-	case 1:
-	{
-		FillRect(hdc, &rectBatteryStatusBG, brushBatteryHigh);
-		break;
-	}
+	BYTE flagHighBattery = 1;
+	BYTE flagLowBattery = 2;
+	BYTE flagCriticalBattery = 4;
+	//BYTE flagChargingBattery = 8;
 
-	case 2:
-	{
+	int currentBatteryFlag = powerStatus.BatteryFlag;
+
+	if ((currentBatteryFlag & flagHighBattery) == flagHighBattery) {
+		FillRect(hdc, &rectBatteryStatusBG, brushBatteryHigh);
+	}
+	else if ((currentBatteryFlag & flagLowBattery) == flagLowBattery) {
 		rectBatteryStatusBG.left = rectBatteryStatusBG.right - (rectBatteryStatusBGSize / 2);
 		FillRect(hdc, &rectBatteryStatusBG, brushBatteryLow);
-		break;
 	}
-
-	case 3:
-	{
+	else if ((currentBatteryFlag & flagCriticalBattery) == flagCriticalBattery) {
 		rectBatteryStatusBG.left = rectBatteryStatusBG.right - (rectBatteryStatusBGSize / 3);
 		FillRect(hdc, &rectBatteryStatusBG, brushBatteryCritical);
-		break;
-	}
-
-	default:
-		break;
 	}
 }
 
