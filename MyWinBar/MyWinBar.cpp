@@ -324,17 +324,17 @@ void PaintBatteryInfo(HDC hdc)
 		FillRect(hdc, &rectBatteryStatusBG, brushBatteryHigh);
 	}
 
-	else if (powerStatus.BatteryLifePercent >= 75 && powerStatus.BatteryLifePercent < 90) {
+	else if (powerStatus.BatteryLifePercent >= 40 && powerStatus.BatteryLifePercent < 90) {
 		rectBatteryStatusBG.left = rectBatteryStatusBG.right - (rectBatteryStatusBGSizePortion * 3);
 		FillRect(hdc, &rectBatteryStatusBG, brushBatteryHigh);
 	}
 
-	else if (powerStatus.BatteryLifePercent >= 50 && powerStatus.BatteryLifePercent < 75) {
+	else if (powerStatus.BatteryLifePercent >= 15 && powerStatus.BatteryLifePercent < 40) {
 		rectBatteryStatusBG.left = rectBatteryStatusBG.right - (rectBatteryStatusBGSizePortion * 2);
 		FillRect(hdc, &rectBatteryStatusBG, brushBatteryLow);
 	}
 
-	else if (powerStatus.BatteryLifePercent >= 0 && powerStatus.BatteryLifePercent < 25) {
+	else if (powerStatus.BatteryLifePercent >= 0 && powerStatus.BatteryLifePercent < 15) {
 		rectBatteryStatusBG.left = rectBatteryStatusBG.right - (rectBatteryStatusBGSizePortion);
 		FillRect(hdc, &rectBatteryStatusBG, brushBatteryCritical);
 	}
