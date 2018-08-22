@@ -12,6 +12,9 @@
 #define IDT_REDRAW_TIMER 1000
 #define IDT_REDRAW_BAR_CENTER_TIMER 1001
 
+#define APPBAR_UPDATE_CURRENT_WORKSPACE 1
+#define APPBAR_UPDATE_CURRENT_FOCUS_WINDOW 2
+
 #define black RGB(0, 0, 0)
 #define white RGB(255, 255, 255)
 #define goldYellow RGB(255, 185, 0)

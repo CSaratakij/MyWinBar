@@ -43,19 +43,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
-    // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     LoadStringW(hInstance, IDC_MYWINBAR, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
 
-    // Perform application initialization:
     if (!InitInstance (hInstance, nCmdShow))
         return FALSE;
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_MYWINBAR));
     MSG msg;
 
-    // Main message loop:
     while (GetMessage(&msg, nullptr, 0, 0) > 0)
     {
         if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg)) {
@@ -221,12 +218,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		PCOPYDATASTRUCT p = (PCOPYDATASTRUCT) lParam;
 
-		if (p->dwData == 1) {
+		if (p->dwData == APPBAR_UPDATE_CURRENT_WORKSPACE) {
 			currentWorkspaceInfo = *(unsigned short*)p->lpData;
 			currentWorkspace = (currentWorkspaceInfo >> MAX_WORKSPACE);
 			InvalidateRect(hWnd, &rectLeft, TRUE);
 		}
-		else if (p->dwData == 2) {
+		else if (p->dwData == APPBAR_UPDATE_CURRENT_FOCUS_WINDOW) {
 			currentFocusWindow = *(HWND*)p->lpData;
 			InvalidateRect(hWnd, &rectCenter, TRUE);
 		}
@@ -271,7 +268,7 @@ void PaintWorkspace(HDC hdc)
 			SetTextColor(hdc, black);
 
 			int length = wsprintf(buffer, _T(" %d "), currentWorkspace);
-			TextOut(hdc, offset * offsetMultiplier, 0, buffer, length);
+			TextOut(hdc, (offset * offsetMultiplier), 0, buffer, length);
 			offsetMultiplier += 1;
 		}
 		else {
@@ -280,12 +277,12 @@ void PaintWorkspace(HDC hdc)
 
 			if ((checkWorkspaceFlag & currentWorkspaceInfo) == checkWorkspaceFlag) {
 				int length = wsprintf(buffer, _T(" %d "), i + 1);
-				TextOut(hdc, offset * offsetMultiplier, 0, buffer, length);
+				TextOut(hdc, (offset * offsetMultiplier), 0, buffer, length);
 				offsetMultiplier += 1;
 			}
 		}
 
-		checkWorkspaceFlag = (checkWorkspaceFlag << 1);
+		checkWorkspaceFlag <<= 1;
 	}
 }
 
