@@ -4,9 +4,10 @@
 
 #define MAX_LOADSTRING 100
 
-HWND currentFocusWindow;
 UINT currentWorkspace;
+unsigned short currentWorkspaceInfo = 0;
 
+HWND currentFocusWindow;
 APPBARDATA appbarData;
 
 RECT rectLeft;
@@ -48,9 +49,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     MyRegisterClass(hInstance);
 
     // Perform application initialization:
-    if (!InitInstance (hInstance, nCmdShow)) {
+    if (!InitInstance (hInstance, nCmdShow))
         return FALSE;
-    }
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_MYWINBAR));
     MSG msg;
@@ -95,7 +95,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    if (!hWnd)
       return FALSE;
 
-   LONG appStyle = 0 | WS_DISABLED | WS_CHILD;
+   LONG appStyle = (0 | WS_DISABLED | WS_CHILD);
 
    SetWindowLong(hWnd, GWL_STYLE, appStyle);
    SetWindowLong(hWnd, GWL_EXSTYLE, WS_EX_TOOLWINDOW);
@@ -222,7 +222,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		PCOPYDATASTRUCT p = (PCOPYDATASTRUCT) lParam;
 
 		if (p->dwData == 1) {
-			currentWorkspace = *(UINT*)p->lpData;
+			currentWorkspaceInfo = *(unsigned short*)p->lpData;
+			currentWorkspace = (currentWorkspaceInfo >> MAX_WORKSPACE);
 			InvalidateRect(hWnd, &rectLeft, TRUE);
 		}
 		else if (p->dwData == 2) {
@@ -260,18 +261,31 @@ void PaintWorkspace(HDC hdc)
 	TCHAR buffer[5];
 	UINT offset = 18;
 
-	for (UINT i = 0; i < 10; ++i) {
+	unsigned short checkWorkspaceFlag = 1;
+	int offsetMultiplier = 0;
+
+	for (UINT i = 0; i < MAX_WORKSPACE; ++i) {
+
 		if (i == (currentWorkspace - 1)) {
 			SetBkColor(hdc, goldYellow);
 			SetTextColor(hdc, black);
+
+			int length = wsprintf(buffer, _T(" %d "), currentWorkspace);
+			TextOut(hdc, offset * offsetMultiplier, 0, buffer, length);
+			offsetMultiplier += 1;
 		}
 		else {
 			SetBkColor(hdc, black);
 			SetTextColor(hdc, white);
+
+			if ((checkWorkspaceFlag & currentWorkspaceInfo) == checkWorkspaceFlag) {
+				int length = wsprintf(buffer, _T(" %d "), i + 1);
+				TextOut(hdc, offset * offsetMultiplier, 0, buffer, length);
+				offsetMultiplier += 1;
+			}
 		}
-		
-		int length = wsprintf(buffer, _T(" %d "), i + 1);
-		TextOut(hdc, offset * i, 0, buffer, length);
+
+		checkWorkspaceFlag = (checkWorkspaceFlag << 1);
 	}
 }
 
@@ -283,7 +297,7 @@ void PaintCurrentFocusWindow(HDC hdc)
 	HWND hWnd = currentFocusWindow;
 
 	if (hWnd == NULL) {
-		DrawTextW(hdc, NULL, 0, &rectCenter, DT_CENTER | DT_VCENTER);
+		DrawTextW(hdc, 0, 0, &rectCenter, DT_CENTER | DT_VCENTER);
 	}
 	else {
 		int length = GetWindowText(hWnd, focusWindowTextBuffer, focusWindowTextBufferLength);

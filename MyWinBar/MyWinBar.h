@@ -3,6 +3,7 @@
 
 #include "resource.h"
 
+#define MAX_WORKSPACE 10
 #define MAX_APPBAR_HEIGHT 20
 
 #define TIMER_REDRAW_RATE 5000
